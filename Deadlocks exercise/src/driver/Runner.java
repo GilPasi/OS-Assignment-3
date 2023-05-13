@@ -3,28 +3,78 @@
  * Heba Abu-Kaf - 323980441
  * */
 package driver;
-import java.util.Scanner;
-
 import implementation.*;
 public class Runner {
-	public static void main(String [] args) {
-		final int NO_LIMIT = Integer.MAX_VALUE;
-		Scanner s = new Scanner(System.in);
-		//=====Initialization====
+	static int pCount,rCount;
+	public static void main(String [] args) {		
+		//=====Task 1 check safety====
+		initialize();
+		if(Banker.isSafe())
+			System.out.println("This condition is safe!");
+		else
+			System.out.println("Notice! deadlock is possible");
 		
+		//=====Task 2 find minimal number of additional resources in order to avoid deadlock.====
+		initialize();
+		int resourceNum = Validator.getValidInt("Please enter the resource's serial number "
+				+ "in the range 1 - " + (rCount + 1),rCount + 1) ;
+		System.out.println("The additional needed resources are " + Banker.minDeadlockAvoidance(resourceNum));
 		
-//		Banker.getData();
-		//__Pre-made mock values__
-//		Banker.allocation = new int[][]{{4,1,1},{0,1,0},{1,1,2}};
-//		Banker.available = new int[][]{{3,2,1}};
-//		Banker.claim = new int[][]{{5,6,4},{4,4,4},{3,0,1}};
+		//=====Task 3 check safety====
+		initialize();
+		int processNum = Validator.getValidInt("Please enter a process number in range " 
+		+ 1 +"-" + pCount,pCount) ;
 		
-		Banker.allocation = new int[][]{{1,0,0,3},{2,0,0,2},{1,0,0,2}};
-		Banker.available = new int[]{3,2,0};
-		Banker.claim = new int[][]{{2,0,0,3},{4,4,4,4},{3,0,1,3}};
+		Integer[] pClaims = new Integer [rCount];//Vertical array
+		Banker.fillTable(pClaims);
+		
+		//Assert changes
+		for(int i = 0 ; i < rCount ; i ++ )
+			Banker.claim[i][processNum - 1] = pClaims[i];
+		
+		//Refill according to the user's new demands.
+		if(Banker.examineResourcesRequest(processNum, pClaims))
+			System.out.println("The request accepted");
+		else 
+			System.out.println("This request rejected");
+		
+	}
+	
+	
+	public static void initialize() {		
+				Banker.getData();
+		
+		//Reboot counts
 
 		
-
+		
+		//Uncomment for pre-made values
+		//			||
+		//			||
+		//			\/
+				
+				
+				
+//		Banker.available = new Integer[]{3, //A
+//										 2, //B
+//										 1};//C
+//		
+//		
+//										   //P1 P2 P3 P4
+//		Banker.allocation = new Integer[][]{{1, 0, 0, 3}, //A
+//											{2, 0, 0, 2}, //B
+//											{1, 0, 0, 2}};//C
+//
+//									  //P1 P2 P3 P4
+//		Banker.claim = new Integer[][]{{2, 0, 0, 3}, //A
+//									   {4, 4, 4, 4}, //B
+//									   {3, 0, 1, 3}};//C
+				
+				
+									   
+		pCount = Banker.claim[0].length ; 
+		rCount = Banker.claim.length;
+									   
 		System.out.println("Allocation table: ");
 		Banker.printTable("allocation");	
 		
@@ -33,23 +83,9 @@ public class Runner {
 		
 		System.out.println("Claim table: ");
 		Banker.printTable("claim");	
-		
-		//=====Task 1 check safety====
-		if(Banker.isSafe())
-			System.out.println("This condition is safe!");
-		else
-			System.out.println("Notice! deadlock is possible");
-		
-		//=====Task 2 find minimal number of additional resources in order to avoid deadlock.====
-		int resourceNum = Validator.getValidInt("Please enter the resource's serial number "
-				+ "in the range 1 - " + (Banker.available.length + 1), Banker.available.length+ 1) ;
-		System.out.println("The additional needed resources are " + Banker.minDeadlockAvoidance(resourceNum));
-		
-		//=====Task 3 check safety====
-		
-		
 
 		
 	}
+	
 
 }
