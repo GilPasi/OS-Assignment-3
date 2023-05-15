@@ -6,6 +6,11 @@ package implementation;
 import java.util.Scanner;
 
 public class Validator {
+	public static int getValidNatural(String question, final int NUM_LIM) {
+		int ret = 0;
+		do ret = getValidInt(question, NUM_LIM);while(ret < 0 );
+		return ret;
+	}
 	
 	public static int getValidInt(String question , final int NUM_LIM) {
 		String in ="" ;

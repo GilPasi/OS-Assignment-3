@@ -5,6 +5,7 @@
 package implementation;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.stream.IntStream;
 
 public class Banker {
 	final static int  NULL = -1 ;
@@ -15,178 +16,119 @@ public class Banker {
 	public static Integer [] available;
 	
 	
-	public static boolean examineResourcesRequest(int pn,Integer [] processClaims) {
-		//pn = Process number , rq = Array of requests
-		/**This method find if a given request is going to be approved in any time
-		 * on the run.It is very similar to the isSafe() method.
-		 * the only difference is the focus on a specific process.
-		 * This will be achieved by comparing the result to the given process.
-		 *
-		 * Logic: if we remove the request claim that means that it didn't cause
-		 * a deadlock. Therefore there is no need to check the rest of the claims
-		 * for the current resource - break the loop.
-		 *  If a deadlock is reached and the loop has not break already,
-		 *  that means that the process request has something to do with 
-		 *  a potential deadlock.Therefore the resources will not be allocated.
-		 *  
-		 * */
-		//________ADDDED_________
-		pn = pn - 1 ;//Adjust to indexes
-		//_______________________
+	
+	
+	
+	//============================question's  Algorithms==================================
 
-		//Banker algorithm
-		final int RES_AMOUNT = allocation.length ;
+	public static boolean isSafe() {
+		Queue<Integer []> leftDemands = intArrayToQueue(claim);//Currently all proccess are not treated
+		Queue<Integer []> leftAssignment = intArrayToQueue(allocation);
 		
-		//Step 1: take check a resource 
-		for(int i = 0 ; i < RES_AMOUNT; i++) {
-			Queue<Integer> leftClaims = intArrayToQueue(claim[i]);//Currently all processes are not treated
-			Queue<Integer> leftAllocations = intArrayToQueue(allocation[i]);
-
-			//Sign the start of a circular queue
-			leftClaims.add(NULL);
-			int prevLeftClaims = leftClaims.size();
+		int prevLeftDemandsSize = leftDemands.size();
+		leftDemands.add(null);//To signify the start/ finish of a circular queue
+		while(leftDemands.size() > 1) {
+			Integer [] curDemand = leftDemands.remove();
+			Integer [] curAssignment = leftAssignment.remove();
 			
-			while(leftClaims.size() > 1) {
-				Integer currentClaim = leftClaims.remove();
-				
-				
-
-				//Step 2 : check if no change was made == deadlock
-				if(currentClaim == NULL) {
-					leftClaims.add(currentClaim);
-					if(prevLeftClaims == leftClaims.size())//Sign for no change 
-						return false;//Deadlock reached
-					prevLeftClaims = leftClaims.size();//Update before the next cycle
-					continue;					
-				}
-				
-				//Step 3: try to allocate resources to the current process
-				Integer currentAllocation = leftAllocations.remove();
-				
-				//Failure, return the process to queue
-				if(currentClaim.intValue() > available[i] + currentAllocation) {
-					leftClaims.add(currentClaim);
-					leftAllocations.add(currentAllocation);
-				}
-				//Success, redeem the process'es previous allocation
+			if(curDemand == null) {
+				/*If end of queue is reached and there was no change
+				in the queue size, essentially no process was released.*/
+				if(prevLeftDemandsSize == leftDemands.size())
+					return false;
 				else {
-					//________ADDDED_________
-					if(currentClaim == processClaims[i])//Compare addresses
-						break;
-					//_______________________
-
-					
-					available[i] += currentAllocation.intValue();
+					leftDemands.add(curDemand);
+					prevLeftDemandsSize = leftDemands.size();
+					continue;
 				}
 			}
+			if(!approveAllocation(curDemand , curAssignment)) {
+				leftDemands.add(curDemand);
+				leftAssignment.add(curAssignment);
+			}
+			else
+				redeemResources(curDemand);
+			
 		}
-
-		return true;
+		return true;		
 	}
-	
-	
-	
-	public static int minDeadlockAvoidance (int rn) {//rn = Resource number
+	public static int minDeadlockAvoidance(int rn) {//rn = resource number
 		/**This method works very similarly to the isSafe method.
 		 * It activates the banker's algorithm however there is a small change.
-		 * Instead of alerting about a deadlock it will increase 
-		 * the minimum added resources. 
+		 * Once a potential deadlock is reached, it will find the maximum need.
+		 * if the maximum need is fulfilled, for sure, the rest will follow.
 		 * */
-		//________ADDDED_________
-		rn = rn - 1 ;//Adjust to indexes
-		//_______________________
-
+		Queue<Integer []> leftDemands = intArrayToQueue(claim);//Currently all proccess are not treated
+		Queue<Integer []> leftAssignment = intArrayToQueue(allocation);
 		
-		int minR = 0;//By default no extra resources required
-		//Banker algorithm
-		final int RES_AMOUNT = allocation.length ;
-		
-		//Step 1: take check a resource 
-		
-		Queue<Integer> leftClaims = intArrayToQueue(claim[rn]);//Currently all proccess are not treated
-		Queue<Integer> leftAllocations = intArrayToQueue(allocation[rn]);
-
-		//Sign the start of a circular queue
-		leftClaims.add(NULL);
-		int prevLeftClaims = leftClaims.size();
-		
-		while(leftClaims.size() > 1) {
-			Integer currentClaim = leftClaims.remove();
+		int prevLeftDemandsSize = leftDemands.size();
+		leftDemands.add(null);//To signify the start/ finish of a circular queue
+		while(leftDemands.size() > 1) {
+			Integer [] curDemand = leftDemands.remove();
+			Integer [] curAssignment = leftAssignment.remove();
 			
+			if(curDemand == null) {
+				/*If end of queue is reached and there was no change
+				in the queue size, essentially no process was released.*/
+				if(prevLeftDemandsSize == leftDemands.size()) {
+					
+					//________________NEW_____________________
+					int maxNeed = Integer.MIN_VALUE;
+					while (!leftDemands.isEmpty() && !leftAssignment.isEmpty()) {
+						int need = leftDemands.remove()[rn] - leftAssignment.remove()[rn];
+						maxNeed = Math.max(need, maxNeed);
+					}
+					return maxNeed - available[rn];
+					//________________________________________
 
-			//Step 2 : check if no change was made == deadlock
-			if(currentClaim == NULL) {
-				leftClaims.add(currentClaim);
-				if(prevLeftClaims == leftClaims.size())//Sign for no change 
-					//________ADDDED_________
-					minR++ ;//Deadlock reached
-					//________ADDDED_________
-
-				prevLeftClaims = leftClaims.size();//Update before the next cycle
-				continue;					
-			}
-			
-			//Step 3: try to allocate resources to the current process
-			Integer currentAllocation = leftAllocations.remove();
-			
-			//Failure, return the process to queue
-			if(currentClaim.intValue() > available[rn] + currentAllocation + minR) {
-				leftClaims.add(currentClaim);
-				leftAllocations.add(currentAllocation);
-			}
-			//Success, redeem the process'es previous allocation
-			else
-				available[rn] += currentAllocation.intValue();
-		}
-		return minR;
-		
-	}
-	
-	public static boolean isSafe () {
-		//Banker algorithm
-		final int RES_AMOUNT = allocation.length ;
-		
-		//Step 1: take check a resource 
-		for(int i = 0 ; i < RES_AMOUNT; i++) {
-			Queue<Integer> leftClaims = intArrayToQueue(claim[i]);//Currently all proccess are not treated
-			Queue<Integer> leftAllocations = intArrayToQueue(allocation[i]);
-
-			//Sign the start of a circular queue
-			leftClaims.add(NULL);
-			int prevLeftClaims = leftClaims.size();
-			
-			while(leftClaims.size() > 1) {
-				Integer currentClaim = leftClaims.remove();
-				
-
-				//Step 2 : check if no change was made == deadlock
-				if(currentClaim == NULL) {
-					leftClaims.add(currentClaim);
-					if(prevLeftClaims == leftClaims.size())//Sign for no change 
-						return false;//Deadlock reached
-					prevLeftClaims = leftClaims.size();//Update before the next cycle
-					continue;					
 				}
-				
-				//Step 3: try to allocate resources to the current process
-				Integer currentAllocation = leftAllocations.remove();
-				
-				//Failure, return the process to queue
-				if(currentClaim.intValue() > available[i] + currentAllocation) {
-					leftClaims.add(currentClaim);
-					leftAllocations.add(currentAllocation);
+					
+				else {
+					leftDemands.add(curDemand);
+					prevLeftDemandsSize = leftDemands.size();
+					continue;
 				}
-				//Success, redeem the process'es previous allocation
+			}
+				if(!approveAllocation(curDemand , curAssignment)) {
+					leftDemands.add(curDemand);
+					leftAssignment.add(curAssignment);
+				}
 				else
-					available[i] += currentAllocation.intValue();
-			}
+					redeemResources(curDemand);
+					
 		}
-
+		return 0;/*If there is no potential for 
+				   a deadlock, there is no need for 
+				   Extra resources */
+	}
+		
+	public static boolean approveAllocation (Integer [] demand , Integer [] assignment) {
+		for(int i = 0; i < available.length ; i++ )
+			if(demand[i] > available[i] + assignment[i])
+				return false;
 		return true;
 	}
+	
+	
+	//==================================Aid functions==================================
+	
+	private static void redeemResources (Integer [] assignment) {
+		for(int i = 0; i < available.length; i++)
+			available[i] += assignment[i];
+	}
+	
 	
 	private static LinkedList<Integer> intArrayToQueue(Integer [] arr) {
 		LinkedList<Integer> queue = new LinkedList<Integer>();
+
+		for (int i = 0; i < arr.length; i++) {
+		    queue.add(arr[i]);
+		}
+		return queue;
+	}
+	
+	private static LinkedList<Integer []> intArrayToQueue(Integer [][] arr) {
+		LinkedList<Integer []> queue = new LinkedList<Integer []>();
 
 		for (int i = 0; i < arr.length; i++) {
 		    queue.add(arr[i]);
@@ -200,8 +142,8 @@ public class Banker {
 
 		//Now initiate matrices
 		available = new Integer [validResCount];//The available table is actually  1-dimensional
-		claim = new Integer [validResCount][validProcCount];
-		allocation = new Integer [validResCount][validProcCount];
+		claim = new Integer [validProcCount][validResCount];
+		allocation = new Integer [validProcCount][validResCount];
 		
 		System.out.println("Available array");
 		fillTable( available);
@@ -215,7 +157,7 @@ public class Banker {
 	public static Integer [][] fillTable (Integer [][] matrix) {
 		for(int i = 0; i < matrix.length ; i++) {
 			for(int j = 0; j < matrix[0].length ; j++) {
-				matrix[i][j] = Validator.getValidInt("for P" + (i+1) + " " + (char)('A' + j) , NO_LIMIT);
+				matrix[i][j] = Validator.getValidNatural("for P" + (i+1) + " " + (char)('A' + j) , NO_LIMIT);
 			}
 		}
 		return matrix;
@@ -227,47 +169,36 @@ public class Banker {
 		return list;
 	}
 	
-	public static void printTable (String matName) {
+	public static void printTables() {
+		System.out.println("\tAllocation\t\t\tClaim\t\t\tAvailable");
 		
-		Integer [][] matrix = null;
-		Integer [] array = null;
-		
-		switch (matName) {
-		case "available": 
-			array = available;
-			break;
-		case "claim": 
-			matrix = claim;
-			break;
-		case "allocation": 
-			matrix = allocation;
-			break;
-		default:
-			System.out.println("No such a table");
-			return;
-		
+		int leftTables = 3;
+		while(leftTables > 0) {
+			for(int j = 0 ;j < allocation[0].length;j++) 
+				System.out.print("\t" +(char) ('A' + j));
+			System.out.print("|");
+			leftTables --;
 		}
-		if(matrix != null) {
-			System.out.println("r/p #################################");
-			for(int i = 0; i < matrix.length ; i++) {
-				System.out.print("#");				
-				for(int j = 0; j < matrix[0].length ; j++) 
-					System.out.print( matrix[i][j] + "\t" );
+			
+			
+		for(int i = 0; i < allocation.length;i++) {
+			System.out.print("\nP" + (i+1) + "  ");
+			
+			for(int j = 0 ;j < allocation[0].length;j++) 
+				System.out.print("\t" + allocation[i][j]);
+			System.out.print("|");
+			
+			for(int j = 0 ;j < allocation[0].length;j++) 
+				System.out.print("\t" + claim[i][j]);
+			System.out.print("|");
 
-				
-				System.out.println();
-			}	
-		}
-		
-		if(array != null) {
-			for(int num : array)
-				System.out.print(num + "\t");
-			System.out.println();
+			
+			for(int j = 0 ;j < allocation[0].length;j++) 
+				System.out.print("\t" +available[j]);
+			System.out.print("|");
+
 			
 		}
-	}
-	
-	
-	
-
+		System.out.println("\n");
+	}	
 }
